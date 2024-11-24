@@ -1,24 +1,12 @@
 #include "myclib/string/mystring.h"
 #include "parser.h"
 
+#include <assert.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
-
-
-
-
-node* node_new(string text, node* left, node* right) {
-
-    node* res = (node*)malloc(sizeof(node));
-    res->text = text;
-    res->left = left;
-    res->right = right;
-
-    return res;
-}
 
 string delete_spaces(string str) {
     string new_string = string_new_empty(str.capacity);
@@ -31,38 +19,14 @@ string delete_spaces(string str) {
     return new_string;
 }
 
-void plase_mult(string *str) {
-    char prev = *string_at_pos(str,0);
-    const char* cur = string_at_pos(str, 1);
-    while(*cur != '\0') {
-        if (isdigit(prev) && (isalpha(*cur) || *cur == '\\')) {
-            string_insert(str,'*',cur-1-str->str);
-        }
-        else if (isalpha(prev) && isdigit(*cur)) {
-            string_insert(str,'*',cur-1-str->str);
-        }
-        else if (prev == ')' && *cur == '(') {
-            string_insert(str,'*',cur-1-str->str);
-        }
-        prev = *cur;
-        cur++;
-    }
-}
 
 int which_func(char* str) {
     char* functions[] = {"log","ln","sin","cos","sqrt","tg","ctg","arcsin","arccos","arctg","arcctg"};
-    for (int i = 0; i < sizeof(functions)/sizeof(char*);i++) {
+    for (int i = 0; i < sizeof(functions)/sizeof(char*); i++) {
         if (strcmp(functions[i], str) == 0) {
             return i;
         }
     }
-}
-
-node* parse(string str) {
-    string newstr = delete_spaces(str);
-    plase_mult(&newstr);
-    string_destroy(&str);
-    return plus_minus(newstr);
 }
 
 void tree_destroy(node* n) {
@@ -72,158 +36,222 @@ void tree_destroy(node* n) {
     if (n->right != NULL) {
         tree_destroy(n->right);
     }
-    string_destroy(&n->text);
     free(n);
 }
 
-node* plus_minus(string str) {
-    for (size_t i = 0; i < str.length ; i++) {
-        const char* digit = string_at_pos(&str,i);
-        if (*digit == LB) {
-            digit++;
-            i++;
-            while(*digit != RB) {
-                digit++;
-                i++;
-            }
-        }
-        if (*digit == PLUS || *digit == MINUS) {
-            node* res = node_new(string_new_empty(2), NULL, NULL);
-            string_push_back(&(res->text),*digit);
-            res->left = mult(string_substr(&str, 0, i-1));
-            res->right = plus_minus(string_substr(&str, i+1, str.length-1));
-            string_destroy(&str);
-            return res;
-        }
-
-    }
-    return mult(str);
+node* parse(char* str) {
+    return plus_minus(&str);
 }
 
-node* mult(string str) {
-    for (size_t i = 0; i < str.length ; i++) {
-        const char* digit = string_at_pos(&str,i);
-        if (*digit == LB) {
-            digit++;
-            i++;
-            while(*digit != RB) {
-                digit++;
-                i++;
-            }
-        }
-        if (*digit == MUL || *digit == DIV) {
-            node* res = node_new(string_new_empty(1), NULL, NULL);
-            string_push_back(&(res->text),*digit);
-            res->left = power(string_substr(&str,0,i-1));
-            res->right = mult(string_substr(&str,i+1,str.length-1));
-            string_destroy(&str);
-            return res;
-        }
+node* plus_minus(char** str) {
+    node* left = mult(str);
+    if (**str == PLUS || **str == MINUS) {
+        node* res = malloc(sizeof(node));
+        res->left = left;
+        res->type = OPERATION;
+
+        res->value = **str;
+
+        (*str)++;
+        res->right = plus_minus(str);
+
+        return res;
     }
-    return power(str);
+    return left;
 }
 
-node* power(string str) {
-    for (size_t i = 0; i < str.length ; i++) {
-        const char* digit = string_at_pos(&str,i);
-        if (*digit == LB) {
-            digit++;
-            i++;
-            while(*digit != RB) {
-                digit++;
-                i++;
-            }
-        }
-        if (*digit == POW) {
-            node* res = node_new(string_new_empty(1), NULL, NULL);
-            string_push_back(&(res->text),*digit);
-            res->left = brackets(string_substr(&str,0,i-1));
-            res->right = power(string_substr(&str,i+1,str.length-1));
-            string_destroy(&str);
-            return res;
-        }
+node* mult(char** str) {
+    node* left = power(str);
+    if (**str == MUL || **str == DIV) {
+        node* res = malloc(sizeof(node));
+
+        res->left = left;
+        res->type = OPERATION;
+
+        res->value = **str;
+
+        (*str)++;
+        res->right = mult(str);
+
+        return res;
     }
-    return brackets(str);
+    return left;
 }
 
-node* brackets(string str) {
-    if (*string_at_pos(&str,0) == LB) {
-        return plus_minus(string_substr(&str,1,str.length-2));
+node* power(char** str) {
+    node* left = brackets(str);
+    if (**str == POW) {
+        node* res = malloc(sizeof(node));
+
+        res->left = left;
+        res->type = OPERATION;
+
+        res->value = **str;
+
+        (*str)++;
+        res->right = power(str);
+
+        return res;
+    }
+    return left;
+}
+
+node* brackets(char** str) {
+    if (**str == LB || **str == LCB) {
+        (*str)++;
+
+        node* res = plus_minus(str);
+
+        if (**str != RB && **str != RCB) {
+            abort();
+        }
+
+        (*str)++;
+
+        return res;
     }
     return function(str);
 }
 
-node* function(string str) {
+node* function(char** str) {
 
-    const char* digit = string_at_pos(&str,0);
+    if (**str == '\\') {
+        node* res = malloc(sizeof(node));
 
-    string func = string_new_empty(10);
-    if (*digit == '\\') {
-        digit++;
-        while(*digit != '{') {
-            string_push_back(&func,*digit);
-            digit++;
+        string text = string_new_empty(5);
+
+        (*str)++;
+
+        while(**str != '{') {
+            string_push_back(&text,**str);
+            (*str)++;
         }
-    } else {
 
-        return node_new(str,NULL,NULL);
+        res->type = FUNCTION;
+        res->value = which_func(text.str);
+        res->left = brackets(str);
+        res->right = NULL;
 
+        string_destroy(&text);
+
+        return res;
     }
 
-    switch (which_func(func.str)) {
-        case LOG:
-        case LN:
-            return ln(string_substr(&str,digit-str.str,str.length-1));
-        case SIN:
-        case COS:
-        case SQRT:
-        case TG:
-        case CTG:
-        case ARCSIN:
-        case ARCCOS:
-        case ARCTG:
-        case ARCCTG:
+    return getvar(str);
+}
+
+
+
+node* getvar(char** str) {
+    if (isalpha(**str)) {
+        node* res = malloc(sizeof(node));
+        res->type = VARIABLE;
+        res->value = **str;
+        res->left = NULL;
+        res->right = NULL;
+
+        (*str)++;
+
+        return res;
     }
-    string_destroy(&func);
-    return node_new(str,NULL,NULL);
+    return getnum(str);
+
 }
 
-node* ln(string str) {
-    return node_new(str,NULL,NULL);
+node* getnum(char** str) {
+    node* res = malloc(sizeof(node));
+
+    char* old_str = *str;
+
+    res->value = 0;
+    res->type = NUMBER;
+    res->left = NULL;
+    res->right = NULL;
+
+    while(**str >= '0' && **str <= '9') {
+        res->value *= 10;
+        res->value += **str - '0';
+        (*str)++;
+    }
+
+    if (old_str == *str) {
+        abort();
+    }
+
+    return res;
 }
 
-/* node* sin(string str) { */
+static void sup_to_graph(FILE* f, node* n) {
+    assert(n != NULL);
 
-/* } */
+    switch(n->type) {
+        case NUMBER:
+            fprintf(f, "%d [label=\"%d\"]\n", n, n->value);
+            break;
+        case VARIABLE:
+            fprintf(f, "%d [label=\"%c\"]\n", n, n->value);
+            break;
+        case OPERATION:
+            fprintf(f, "%d [label=\"%c\"]\n", n, n->value);
+            break;
+        case FUNCTION:
+            switch(n->value) {
+                case LOG:
+                    fprintf(f, "%d [label=\"log\"]\n", n);
+                    break;
+                case LN:
+                    fprintf(f, "%d [label=\"ln\"]\n", n);
+                    break;
+                case SIN:
+                    fprintf(f, "%d [label=\"sin\"]\n", n);
+                    break;
+                case COS:
+                    fprintf(f, "%d [label=\"cos\"]\n", n);
+                    break;
+                case SQRT:
+                    fprintf(f, "%d [label=\"sqrt\"]\n", n);
+                    break;
+                case TG:
+                    fprintf(f, "%d [label=\"tg\"]\n", n);
+                    break;
+                case CTG:
+                    fprintf(f, "%d [label=\"ctg\"]\n", n);
+                    break;
+                case ARCSIN:
+                    fprintf(f, "%d [label=\"arcsin\"]\n", n);
+                    break;
+                case ARCCOS:
+                    fprintf(f, "%d [label=\"arccos\"]\n", n);
+                    break;
+                case ARCTG:
+                    fprintf(f, "%d [label=\"arctg\"]\n", n);
+                    break;
+                case ARCCTG:
+                    fprintf(f, "%d [label=\"arcctg\"]\n", n);
+                    break;
+            }
+            break;
+    }
 
-/* node* cos(string str) { */
+    if (n->left != NULL) {
+        fprintf(f, "\"%d\" -> %d;\n", n, n->left);
+        sup_to_graph(f, n->left);
+    }
 
-/* } */
+    if (n->right != NULL) {
+        fprintf(f, "\"%d\"-> \"%d\";\n", n, n->right);
+        sup_to_graph(f, n->right);
+    }
+}
 
-/* node* sqrt(string str) { */
+void to_graph(node* n) {
+    FILE *f = fopen("./graph.gv", "w");
 
-/* } */
+    fputs("digraph G {\n", f);
 
-/* node* tg(string str) { */
+    sup_to_graph(f, n);
 
-/* } */
+    fputc('}', f);
+    fclose(f);
+}
 
-/* node* ctg(string str) { */
-
-/* } */
-
-/* node* arcsin(string str) { */
-
-/* } */
-
-/* node* arccos(string str) { */
-
-/* } */
-
-/* node* arctg(string str) { */
-
-/* } */
-
-/* node* arcctg(string str) { */
-
-/* } */

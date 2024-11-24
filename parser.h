@@ -3,7 +3,16 @@
 
 #include "myclib/string/mystring.h"
 
-enum Tokens {
+#include <stdio.h>
+
+enum Node_Type {
+    NUMBER = 0,
+    VARIABLE,
+    OPERATION,
+    FUNCTION,
+};
+
+enum Math_func{
     LOG = 0,
     LN,
     SIN,
@@ -15,36 +24,44 @@ enum Tokens {
     ARCCOS,
     ARCTG,
     ARCCTG,
+};
 
-    POW = '^',
-    PLUS = '+',
-    MINUS = '-',
-    MUL = '*',
-    DIV = '/',
+enum Tokens {
     LB = '(',
     RB = ')',
-} TOKENS;
+    MUL = '*',
+    PLUS = '+',
+    MINUS = '-',
+    DIV = '/',
+    POW = '^',
+    LCB = '{',
+    RCB = '}',
+};
 
 typedef struct _node{
-    string text;
+    long long value;
+    enum Node_Type type;
     struct _node *left;
     struct _node *right;
 }node;
 
-node* node_new(string text, node* left, node* right);
 void tree_destroy(node* n);
 
 int which_func(char* str);
 
-void plase_mult(string *str);
+void plase_mult(char* str);
 
-node* parse(string str);
-node* plus_minus(string str);
-node* mult(string str);
-node* brackets(string str);
-node* power(string str);
+node* parse(char* str);
+node* plus_minus(char** str);
+node* mult(char** str);
+node* brackets(char** str);
+node* power(char** str);
+node* function(char** str);
+node* getvar(char** str);
+node* getnum(char** str);
 
-node* function(string str);
-node* ln(string str);
+
+static void sup_to_graph(FILE* f, node* n);
+void to_graph(node* n);
 
 #endif // _PARSER_H_
