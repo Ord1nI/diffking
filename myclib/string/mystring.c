@@ -74,6 +74,17 @@ void string_insert(string* my_str, char c, size_t pos) {
     my_str->length++;
 }
 
+void string_delete(string* my_str, size_t pos) {
+    assert(my_str != NULL);
+
+    if (pos+1 > my_str->length) {
+        return;
+    }
+
+    memmove(my_str->str+pos, my_str->str+pos+1, my_str->length-pos);
+    my_str->length--;
+}
+
 void string_shrink(string* my_str, size_t num_to_shrink) {
     assert(my_str != NULL);
     assert(num_to_shrink < my_str->length);

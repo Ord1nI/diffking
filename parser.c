@@ -8,17 +8,33 @@
 #include <stdio.h>
 #include <stddef.h>
 
-string delete_spaces(string str) {
-    string new_string = string_new_empty(str.capacity);
-    for (size_t i = 0; i < str.length; i++) {
-        const char* digit = string_at_pos(&str,i);
-        if (*digit != ' ') {
-            string_push_back(&new_string, *digit);
+void delete_spaces(string str) {
+    char* str_cp = str.str;
+    while(*str_cp != '\0') {
+        if(*str_cp == ' ') {
+            string_delete(&str, str_cp - str.str);
         }
+        str_cp++;
     }
-    return new_string;
 }
 
+void plase_mult(string str) {
+    char prev = *string_at_pos(&str,0);
+    const char* cur = string_at_pos(&str, 1);
+    while(*cur != '\0') {
+        if (isdigit(prev) && (isalpha(*cur) || *cur == '\\')) {
+            string_insert(&str,'*', cur-1-str.str);
+        }
+        else if (isalpha(prev) && isdigit(*cur)) {
+            string_insert(&str, '*', cur-1-str.str);
+        }
+        else if (prev == ')' && *cur == '(') {
+            string_insert(&str, '*', cur-1-str.str);
+        }
+        prev = *cur;
+        cur++;
+    }
+}
 
 int which_func(char* str) {
     char* functions[] = {"log","ln","sin","cos","sqrt","tg","ctg","arcsin","arccos","arctg","arcctg"};
@@ -39,8 +55,11 @@ void tree_destroy(node* n) {
     free(n);
 }
 
-node* parse(char* str) {
-    return plus_minus(&str);
+node* parse(string s) {
+    delete_spaces(s);
+    plase_mult(s);
+    char ** str_cp = &s.str;
+    return plus_minus(str_cp);
 }
 
 node* plus_minus(char** str) {
@@ -162,16 +181,26 @@ node* getnum(char** str) {
     node* res = malloc(sizeof(node));
 
     char* old_str = *str;
+    bool is_negative = false;
 
     res->value = 0;
     res->type = NUMBER;
     res->left = NULL;
     res->right = NULL;
 
-    while(**str >= '0' && **str <= '9') {
+    if (**str == '-') {
+        is_negative = true;
+        (*str)++;
+    }
+
+    while((**str >= '0' && **str <= '9')) {
         res->value *= 10;
         res->value += **str - '0';
         (*str)++;
+    }
+
+    if(is_negative) {
+        res->value *= -1;
     }
 
     if (old_str == *str) {

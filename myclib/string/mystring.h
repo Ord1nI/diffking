@@ -22,6 +22,8 @@ void string_push_back(string* my_str, char c);
 
 void string_insert(string* my_str, char c, size_t pos);
 
+void string_delete(string* my_str, size_t pos);
+
 string string_substr(string* my_str, size_t start, size_t end);
 
 const char* string_at_pos(string* my_str, size_t pos);

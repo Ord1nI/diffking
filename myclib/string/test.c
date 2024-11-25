@@ -15,5 +15,6 @@ int main() {
     string_insert(&str3,'4',3);
     string_insert(&str3,'4',3);
     puts(str3.str);
-    printf("%d\n", str3.length);
+    string_delete(&str3,100);
+    puts(str3.str);
 }

@@ -49,9 +49,10 @@ void tree_destroy(node* n);
 
 int which_func(char* str);
 
-void plase_mult(char* str);
+void delete_spaces(string str);
+void plase_mult(string str);
 
-node* parse(char* str);
+node* parse(string str);
 node* plus_minus(char** str);
 node* mult(char** str);
 node* brackets(char** str);
