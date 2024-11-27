@@ -4,7 +4,7 @@
 
 
 int main() {
-    string s = string_new("x^-2-\\sin{15}");
+    string s = string_new("x^2-x^4+3*x^2+2x");
     node* n = parse(s);
     to_graph(n);
     string a = dif(n);
