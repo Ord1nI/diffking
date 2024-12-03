@@ -38,9 +38,8 @@ void string_concatinate_c_str(string* my_str, char * c_str) {
     size_t c_str_len = strlen(c_str);
 
     if (_string_need_grow(my_str, c_str_len)) {
-        _string_grow(my_str);
+        _string_grow(my_str, c_str_len);
     }
-
 
     memcpy(my_str->str + my_str->length, c_str, c_str_len+1);
 
@@ -52,7 +51,7 @@ void string_push_back(string* my_str, char c) {
 
 
     if (_string_need_grow(my_str, 1)) {
-        _string_grow(my_str);
+        _string_grow(my_str, 1);
     }
 
     *(my_str->str+my_str->length) = c;
@@ -66,7 +65,7 @@ void string_insert(string* my_str, char c, size_t pos) {
 
 
     if (_string_need_grow(my_str, 1)) {
-        _string_grow(my_str);
+        _string_grow(my_str, 1);
     }
 
     memmove(my_str->str+pos+2, my_str->str+pos+1, my_str->length-pos);
@@ -135,9 +134,12 @@ static float _new_string_size(string* my_str) {
     }
 }
 
-static void _string_grow(string* my_str) {
+static void _string_grow(string* my_str, size_t grow_num) {
    assert(my_str->str != NULL);
 
-   my_str->capacity*=_new_string_size(my_str);
+   while(my_str->capacity < my_str->length+grow_num+1) {
+        my_str->capacity*=_new_string_size(my_str);
+   }
+
    my_str->str = (char*)realloc(my_str->str, my_str->capacity);
 }

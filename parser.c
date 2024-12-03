@@ -2,14 +2,13 @@
 #include "parser.h"
 
 #include <assert.h>
-#include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <stddef.h>
 
 void delete_spaces(string str) {
+
     char* str_cp = str.str;
+
     while(*str_cp != '\0') {
         if(*str_cp == ' ') {
             string_delete(&str, str_cp - str.str);
@@ -21,38 +20,34 @@ void delete_spaces(string str) {
 void plase_mult(string str) {
     char prev = *string_at_pos(&str,0);
     const char* cur = string_at_pos(&str, 1);
+
     while(*cur != '\0') {
+
         if (isdigit(prev) && (isalpha(*cur) || *cur == '\\')) {
             string_insert(&str,'*', cur-1-str.str);
         }
+
         else if (isalpha(prev) && isdigit(*cur)) {
             string_insert(&str, '*', cur-1-str.str);
         }
+
         else if (prev == ')' && *cur == '(') {
             string_insert(&str, '*', cur-1-str.str);
         }
+
         prev = *cur;
         cur++;
     }
 }
 
 int which_func(char* str) {
-    char* functions[] = {"log","ln","sin","cos","sqrt","tg","ctg","arcsin","arccos","arctg","arcctg"};
+    char* functions[] = {"log","ln","sin","cos","sqrt","tg","ctg","arcsin","arccos","arctg","arcctg", "frac"};
     for (int i = 0; i < sizeof(functions)/sizeof(char*); i++) {
         if (strcmp(functions[i], str) == 0) {
             return i;
         }
     }
-}
-
-void tree_destroy(node* n) {
-    if (n->left != NULL) {
-        tree_destroy(n->left);
-    }
-    if (n->right != NULL) {
-        tree_destroy(n->right);
-    }
-    free(n);
+    abort();
 }
 
 node* parse(string s) {
@@ -69,7 +64,7 @@ node* plus_minus(char** str) {
         res->left = left;
         res->type = OPERATION;
 
-        res->value = **str;
+        res->value.d = **str;
 
         (*str)++;
         res->right = plus_minus(str);
@@ -80,17 +75,35 @@ node* plus_minus(char** str) {
 }
 
 node* mult(char** str) {
-    node* left = power(str);
-    if (**str == MUL || **str == DIV) {
+    node* left = division(str);
+    if (**str == MUL) {
         node* res = malloc(sizeof(node));
 
         res->left = left;
         res->type = OPERATION;
 
-        res->value = **str;
+        res->value.d = **str;
 
         (*str)++;
         res->right = mult(str);
+
+        return res;
+    }
+    return left;
+}
+
+node* division(char** str) {
+    node* left = power(str);
+    if (**str == DIV) {
+        node* res = malloc(sizeof(node));
+
+        res->left = left;
+        res->type = OPERATION;
+
+        res->value.d = **str;
+
+        (*str)++;
+        res->right = division(str);
 
         return res;
     }
@@ -105,7 +118,7 @@ node* power(char** str) {
         res->left = left;
         res->type = OPERATION;
 
-        res->value = **str;
+        res->value.d = **str;
 
         (*str)++;
         res->right = power(str);
@@ -142,17 +155,32 @@ node* function(char** str) {
         (*str)++;
 
         while(**str != '{') {
+
+            if (**str == '\0') {
+                abort();
+            }
+
             string_push_back(&text,**str);
             (*str)++;
         }
 
-        res->type = FUNCTION;
-        res->value = which_func(text.str);
-        res->left = brackets(str);
-        res->right = NULL;
+        res->value.d = which_func(text.str);
+
+        if(res->value.d != FRAC) {
+
+            res->type = FUNCTION;
+            res->left = brackets(str);
+            res->right = NULL;
+
+        } else {
+            res->type = OPERATION;
+            res->value.d = DIV;
+            res->left = brackets(str);
+            res->right = brackets(str);
+
+        }
 
         string_destroy(&text);
-
         return res;
     }
 
@@ -165,7 +193,7 @@ node* getvar(char** str) {
     if (isalpha(**str)) {
         node* res = malloc(sizeof(node));
         res->type = VARIABLE;
-        res->value = **str;
+        res->value.d = **str;
         res->left = NULL;
         res->right = NULL;
 
@@ -183,7 +211,9 @@ node* getnum(char** str) {
     char* old_str = *str;
     bool is_negative = false;
 
-    res->value = 0;
+    long long tmp_val_ll = 0;
+    long double tmp_val_f = 0;
+
     res->type = NUMBER;
     res->left = NULL;
     res->right = NULL;
@@ -194,13 +224,38 @@ node* getnum(char** str) {
     }
 
     while((**str >= '0' && **str <= '9')) {
-        res->value *= 10;
-        res->value += **str - '0';
+        tmp_val_ll *= 10;
+        tmp_val_ll += **str - '0';
         (*str)++;
     }
 
+    if (**str == '.') {
+        (*str)++;
+        long double degree = 1.0/10;
+
+        while((**str >= '0' && **str <= '9')) {
+            tmp_val_f = tmp_val_f + (**str - '0') * degree;
+            (*str)++;
+        }
+    }
+
+    if (tmp_val_f != 0) {
+        res->type = FNUMBER;
+
+        tmp_val_f += tmp_val_ll;
+
+        if(is_negative) {
+            tmp_val_f *= -1;
+        }
+
+        res->value.f = tmp_val_f;
+        return res;
+    }
+
+    res->value.d = tmp_val_ll;
+
     if(is_negative) {
-        res->value *= -1;
+        res->value.d *= -1;
     }
 
     if (old_str == *str) {
@@ -215,7 +270,10 @@ static void sup_to_graph(FILE* f, node* n) {
 
     switch(n->type) {
         case NUMBER:
-            fprintf(f, "%d [label=\"%d\"]\n", n, n->value);
+            fprintf(f, "%d [label=\"%d\"]\n", n, n->value.d);
+            break;
+        case FNUMBER:
+            fprintf(f, "%d [label=\"%Lf\"]\n", n, n->value.f);
             break;
         case VARIABLE:
             fprintf(f, "%d [label=\"%c\"]\n", n, n->value);
@@ -224,7 +282,7 @@ static void sup_to_graph(FILE* f, node* n) {
             fprintf(f, "%d [label=\"%c\"]\n", n, n->value);
             break;
         case FUNCTION:
-            switch(n->value) {
+            switch(n->value.d) {
                 case LOG:
                     fprintf(f, "%d [label=\"log\"]\n", n);
                     break;
@@ -273,8 +331,8 @@ static void sup_to_graph(FILE* f, node* n) {
     }
 }
 
-void to_graph(node* n) {
-    FILE *f = fopen("./graph.gv", "w");
+void to_graph(node* n, char* file_path) {
+    FILE *f = fopen(file_path, "w");
 
     fputs("digraph G {\n", f);
 

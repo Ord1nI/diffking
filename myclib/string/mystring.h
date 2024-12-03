@@ -31,7 +31,7 @@ const char* string_at_pos(string* my_str, size_t pos);
 void string_destroy(string* my_str);
 
 static bool _string_need_grow(string* my_str, size_t append_num);
-static void _string_grow(string* my_str);
+static void _string_grow(string* my_str, size_t grow_num);
 static float _new_string_size(string* my_str);
 
 #endif // MYSTRING_H_
