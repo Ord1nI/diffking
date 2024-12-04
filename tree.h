@@ -7,6 +7,7 @@ enum Node_Type {
     NUMBER = 0,
     FNUMBER,
     VARIABLE,
+    VARE,
     OPERATION,
     FUNCTION,
     DIVNUMBER,

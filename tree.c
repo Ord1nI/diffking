@@ -73,6 +73,7 @@ void promote_right(node* n) {
 
     n->type = n->right->type;
     n->value = n->right->value;
+
     n->left = n->right->left;
     n->right = n->right->right;
 

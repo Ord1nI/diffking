@@ -105,9 +105,7 @@ node* division(char** str) {
         (*str)++;
         res->right = division(str);
 
-        return res;
-    }
-    return left;
+        return res;} return left;
 }
 
 node* power(char** str) {
@@ -192,7 +190,11 @@ node* function(char** str) {
 node* getvar(char** str) {
     if (isalpha(**str)) {
         node* res = malloc(sizeof(node));
-        res->type = VARIABLE;
+        if (**str == 'e') {
+            res->type = VARE;
+        } else {
+            res->type = VARIABLE;
+        }
         res->value.d = **str;
         res->left = NULL;
         res->right = NULL;
@@ -201,6 +203,7 @@ node* getvar(char** str) {
 
         return res;
     }
+
     return getnum(str);
 
 }

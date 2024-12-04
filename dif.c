@@ -161,6 +161,14 @@ static inline void dif_mul(node* n) {
 
 static inline void dif_pow(node* n) {
 
+    if (n->left->type == VARE) {
+        n->right = copy_tree(n);
+        n->value.d = MUL;
+        free(n->left);
+        n->left = dif_cp(n->right->right);
+        return;
+    }
+
     node* main_cp = copy_tree(n);
     main_cp->right = node_new_ll(OPERATION, MINUS, main_cp->right, node_new_number(1)) ;
 
@@ -180,8 +188,8 @@ static inline void dif_ln(node* n) {
 
     n->type = OPERATION;
     n->value.d = DIV;
-    n->left = new_left;
     n->right = n->left;
+    n->left = new_left;
 }
 
 static inline void dif_sin(node* n) {
@@ -456,6 +464,7 @@ static inline void simplify_mul(node* n) {
 
         n->right->type = NUMBER;
         n->right->value.d = 2;
+        return;
     }
 
 }
@@ -554,6 +563,16 @@ string build_tree(node* n) {
 
     string res;
     switch (n->type) {
+        case VARE:
+            if(n->left != NULL || n->right != NULL) {
+                abort();
+            }
+
+            res = string_new_empty(2);
+            string_push_back(&res,n->value.d);
+
+            return res;
+
         case VARIABLE:
 
             if(n->left != NULL || n->right != NULL) {
