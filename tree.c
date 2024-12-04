@@ -1,5 +1,7 @@
 #include "tree.h"
 
+#include <stdio.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -56,10 +58,7 @@ void promote_left(node* n) {
 
     node* to_free = n->left;
 
-    n->type = n->left->type;
-    n->value = n->left->value;
-    n->right = n->left->right;
-    n->left = n->left->left;
+    memmove(n, n->left, sizeof(node));
 
     free(to_free);
 
@@ -71,14 +70,9 @@ void promote_right(node* n) {
 
     node* to_free = n->right;
 
-    n->type = n->right->type;
-    n->value = n->right->value;
-
-    n->left = n->right->left;
-    n->right = n->right->right;
+    memmove(n, n->right, sizeof(node));
 
     free(to_free);
-
 }
 
 bool compare_tree(node* left, node* right) {
@@ -111,6 +105,10 @@ bool compare_tree(node* left, node* right) {
 }
 
 void tree_destroy(node* n) {
+    if (n == NULL) {
+        return;
+    }
+
     if (n->left != NULL) {
         tree_destroy(n->left);
     }

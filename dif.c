@@ -5,7 +5,6 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include <math.h>
 #include <stdio.h>
 
 
@@ -333,6 +332,7 @@ static void _simplify_tree(node* n) {
             simplify_operations(n);
 
             return;
+
         case FUNCTION:
 
             if (n->left->type == OPERATION) simplify_tree(n->left);
@@ -356,7 +356,6 @@ static inline void simplify_operations(node* n) {
         case DIV:
             simplify_div(n);
             return;
-
         case POW:
             simplify_pow(n);
             return;
@@ -416,6 +415,7 @@ static inline void simplify_mul(node* n) {
 
     }
 
+
     if(n->left->type == FNUMBER) {
         if(n->right->type == NUMBER) {
 
@@ -459,6 +459,7 @@ static inline void simplify_mul(node* n) {
 
         tree_destroy(n->right->left);
         tree_destroy(n->right->right);
+
         n->right->left = NULL;
         n->right->right = NULL;
 
@@ -474,13 +475,56 @@ static inline void simplify_div(node* n) {
 }
 
 static inline void simplify_pow(node* n) {
+    if (n->right->type == NUMBER) {
+        if (n->left->type == NUMBER) {
 
+            n->type = NUMBER;
+            n->value.d = powll(n->left->value.d, n->right->value.d);
+
+            tree_destroy(n->left);
+            tree_destroy(n->right);
+            n->left = NULL;
+            n->right = NULL;
+
+            return;
+        }
+
+        if (n->right->value.d == 0) {
+
+            n->type = NUMBER;
+            n->value.d = 1;
+
+            tree_destroy(n->left);
+            tree_destroy(n->right);
+            n->left = NULL;
+            n->right = NULL;
+
+            return;
+        }
+
+        if (n->right->value.d == 1) {
+            promote_left(n);
+            return;
+        }
+
+        if (n->right->value.d == -1) {
+            node* tmp = n->left;
+
+            n->left = n->right;
+            n->right = tmp;
+
+            n->left->value.d = 1;
+            n->value.d = DIV;
+            return;
+        }
+    }
 }
 
 static inline void simplify_plus(node* n) {
     if (n->left->type == NUMBER) {
         if (n->left->value.d == 0) {
             promote_right(n);
+
             return;
         }
 
@@ -493,6 +537,7 @@ static inline void simplify_plus(node* n) {
 
             n->left = NULL;
             n->right = NULL;
+
             return;
         }
 
@@ -505,6 +550,7 @@ static inline void simplify_plus(node* n) {
 
             n->left = NULL;
             n->right = NULL;
+
             return;
         }
     }
@@ -516,7 +562,19 @@ static inline void simplify_plus(node* n) {
         }
     }
 
+    if (compare_tree(n->left, n->right)) {
+        n->value.d = MUL;
 
+        tree_destroy(n->left->left);
+        tree_destroy(n->left->right);
+        n->left->left = NULL;
+        n->left->right = NULL;
+
+        n->left->type = NUMBER;
+        n->left->value.d = 2;
+
+        return;
+    }
 }
 
 static inline void simplify_minus(node* n) {
@@ -531,6 +589,7 @@ static inline void simplify_minus(node* n) {
 
             n->left = NULL;
             n->right = NULL;
+
             return;
         }
 
@@ -543,6 +602,7 @@ static inline void simplify_minus(node* n) {
 
             n->left = NULL;
             n->right = NULL;
+
             return;
         }
     }
@@ -550,10 +610,21 @@ static inline void simplify_minus(node* n) {
     if (n->right->type == NUMBER) {
         if (n->right->value.d == 0) {
             promote_left(n);
+
             return;
         }
     }
 
+    if (compare_tree(n->left, n->right)) {
+
+        tree_destroy(n->left);
+        tree_destroy(n->right);
+        n->left = NULL;
+        n->right = NULL;
+
+        n->type = NUMBER;
+        n->value.d = 0;
+    }
 
 }
 
